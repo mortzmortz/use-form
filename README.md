@@ -127,6 +127,7 @@ function DateSelect() {
   const {
     values,
     setFieldValue,
+    setFieldTouched,
   } = useForm({
     initialValues: {
       date: new Date(),
