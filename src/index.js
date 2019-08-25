@@ -12,7 +12,7 @@ const useForm = ({
   validate = noop,
   validateOnChange = true,
   validateOnBlur = true,
-}) => {
+} = {}) => {
   const isMounted = React.useRef(false);
   const initialValues = React.useRef(iv);
   const [state, setState] = React.useReducer(
