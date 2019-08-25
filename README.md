@@ -3,7 +3,7 @@
 </h1>
 
 <details>
-<summary>📖 Table of Contents</summary>
+<summary>📒 Table of Contents</summary>
 <p>
 
 - [Getting Started](#getting-started)
@@ -33,7 +33,7 @@ Please note that `use-form` requires `react@^16.8.0` as a peer dependency.
 ### Basic Usage
 
 ```jsx
-import useForm from 'useForm';
+import useForm from "useForm";
 
 function Form() {
   const onSubmit = values => {
@@ -44,28 +44,23 @@ function Form() {
     let errors = {};
 
     if (!email) {
-      errors.email = 'Email is required';
+      errors.email = "Email is required";
     } else if (
-      email && !/^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,4}$/i.test(email)
+      email &&
+      !/^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,4}$/i.test(email)
     ) {
-      errors.email = 'Invalid email address';
+      errors.email = "Invalid email address";
     }
 
     return errors;
   };
 
-  const {
-    values,
-    handleChange,
-    handleBlur,
-    handleSubmit,
-    errors,
-  } = useForm({
+  const { values, handleChange, handleBlur, handleSubmit, errors } = useForm({
     initialValues: {
-      email: '',
+      email: ""
     },
     onSubmit,
-    validate,
+    validate
   });
 
   return (
@@ -78,10 +73,8 @@ function Form() {
         onChange={handleChange}
         onBlur={handleBlur}
       />
-      {errors.email && (<p>{errors.email}</p>)}
-      <button type="submit">
-        Submit
-      </button>
+      {errors.email && <p>{errors.email}</p>}
+      <button type="submit">Submit</button>
     </form>
   );
 }
@@ -90,7 +83,7 @@ function Form() {
 ## API
 
 ```js
-import useForm from 'use-form';
+import useForm from "use-form";
 
 function Form() {
   const {
@@ -103,49 +96,49 @@ function Form() {
     errors,
     touched,
     setFieldValue,
-    setFieldTouched,
+    setFieldTouched
   } = useForm({
     initialValues: {},
     onSubmit: values => {},
     validate: values => {},
     validateOnChange: true,
-    validateOnBlur: true,
+    validateOnBlur: true
   });
 }
 ```
 
 ### Imperative Methods
+
 There are cases where you may want to update the value of an input manually because they are not working with Reacts's [Synthetic Event](https://reactjs.org/docs/events.html). For example, controls like [react-select](https://react-select.com/home) or [react-datepicker](https://www.npmjs.com/package/react-datepicker) have `onChange` and `value` props that expect a custom value instead of an event.
 
 `useForm` provides imperative update methods for handling these controls.
 
 #### `setFieldValue` and `setFieldTouched`
+
 ```js
 import DatePicker from "react-datepicker";
 
 function DateSelect() {
-  const {
-    values,
-    setFieldValue,
-    setFieldTouched,
-  } = useForm({
+  const { values, setFieldValue, setFieldTouched } = useForm({
     initialValues: {
-      date: new Date(),
+      date: new Date()
     }
   });
 
   return (
     <DatePicker
       selected={values.date}
-      onChange={value => setFieldValue('date', value)}
-      onBlur={() => setFieldTouched('date')}
+      onChange={value => setFieldValue("date", value)}
+      onBlur={() => setFieldTouched("date")}
     />
   );
 }
 ```
 
 #### `reset`
+
 The form state can be reset back to its initial state if provided at any time using `reset`.
+
 ```js
 function Form() {
   const {
