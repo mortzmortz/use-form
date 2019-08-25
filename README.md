@@ -6,7 +6,6 @@
 <summary>📒 Table of Contents</summary>
 <p>
 
-- [Getting Started](#getting-started)
 - [Examples](#examples)
   - [Basic Usage](#basic-usage)
 - [API](#api)
@@ -17,16 +16,6 @@
 
 </p>
 </details>
-
-## Getting Started
-
-To get it started, add `use-form` to your project:
-
-```
-npm install --save use-form
-```
-
-Please note that `use-form` requires `react@^16.8.0` as a peer dependency.
 
 ## Examples
 
