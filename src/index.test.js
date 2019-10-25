@@ -16,6 +16,7 @@ describe('useForm API', () => {
       reset: expect.any(Function),
       setFieldValue: expect.any(Function),
       setFieldTouched: expect.any(Function),
+      setValues: expect.any(Function),
       handleSubmit: expect.any(Function),
       handleChange: expect.any(Function),
       handleBlur: expect.any(Function),

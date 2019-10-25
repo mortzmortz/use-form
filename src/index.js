@@ -97,13 +97,6 @@ const useForm = ({
   });
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
-  // Update values if initialValues changes
-  React.useEffect(() => {
-    if (isEqual(state.values, initialValues)) return;
-    dispatch({ type: 'SET_VALUES', payload: initialValues });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialValues]);
-
   React.useEffect(() => {
     isMounted.current = true;
 
@@ -318,6 +311,10 @@ const useForm = ({
     [initialValues]
   );
 
+  const setValues = useEventCallback(values =>
+    dispatch({ type: 'SET_VALUES', payload: values })
+  );
+
   return {
     handleSubmit,
     handleChange,
@@ -329,6 +326,7 @@ const useForm = ({
     isValid,
     setFieldValue,
     setFieldTouched,
+    setValues,
     reset,
     isSubmitting,
   };
