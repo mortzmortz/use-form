@@ -5,24 +5,104 @@ const isObject = obj => obj !== null && typeof obj === 'object';
 const isFunction = obj => typeof obj === 'function';
 const isPromise = value => isObject(value) && isFunction(value.then);
 const noop = () => {};
+const setObjectValues = (
+  obj,
+  value,
+  visited = new WeakMap(),
+  response = {}
+) => {
+  for (let k of Object.keys(obj)) {
+    const val = obj[k];
+    if (isObject(val)) {
+      if (!visited.get(val)) {
+        visited.set(val, true);
+        // In order to keep array values consistent for both dot path  and
+        // bracket syntax, we need to check if this is an array so that
+        // this will output  { friends: [true] } and not { friends: { "0": true } }
+        response[k] = Array.isArray(val) ? [] : {};
+        setObjectValues(val, value, visited, response[k]);
+      }
+    } else {
+      response[k] = value;
+    }
+  }
+
+  return response;
+};
+
+const formReducer = (state = {}, action) => {
+  switch (action.type) {
+    case 'SET_VALUES':
+      return {
+        ...state,
+        values: action.payload,
+      };
+    case 'SET_TOUCHED':
+      return {
+        ...state,
+        touched: action.payload,
+      };
+    case 'SET_ERRORS':
+      return {
+        ...state,
+        errors: action.payload,
+      };
+    case 'SET_FIELD_VALUE':
+      return {
+        ...state,
+        values: {
+          ...state.values,
+          [action.payload.name]: action.payload.value,
+        },
+      };
+    case 'SET_FIELD_TOUCHED':
+      return {
+        ...state,
+        touched: {
+          ...state.touched,
+          [action.payload.name]: action.payload.value,
+        },
+      };
+    case 'SET_FIELD_ERROR':
+      return {
+        ...state,
+        errors: {
+          ...state.errors,
+          [action.payload.name]: action.payload.value,
+        },
+      };
+    case 'RESET_FORM':
+      return {
+        ...state,
+        ...action.payload,
+      };
+    default: {
+      throw new Error(`Unsupported action type: ${action.type}`);
+    }
+  }
+};
 
 const useForm = ({
-  initialValues: iv = {},
+  initialValues = {},
   onSubmit = noop,
   validate = noop,
   validateOnChange = true,
   validateOnBlur = true,
 } = {}) => {
   const isMounted = React.useRef(false);
-  const initialValues = React.useRef(iv);
-  const [state, setState] = React.useReducer(
-    (previousState, newState) => ({ ...previousState, ...newState }),
-    {
-      values: iv,
-      errors: {},
-      touched: {},
-    }
-  );
+  const [state, dispatch] = React.useReducer(formReducer, {
+    values: initialValues,
+    errors: {},
+    touched: {},
+  });
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+
+  // Update values if initialValues changes
+  React.useEffect(() => {
+    if (isEqual(state.values, initialValues)) return;
+    dispatch({ type: 'SET_VALUES', payload: initialValues });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialValues]);
 
   React.useEffect(() => {
     isMounted.current = true;
@@ -67,11 +147,11 @@ const useForm = ({
   );
 
   const validateForm = useEventCallback(
-    values => {
+    (values = state.values) => {
       runAllValidations(values).then(combinedErrors => {
         if (!!isMounted.current) {
           if (!isEqual(state.errors, combinedErrors)) {
-            setState({ errors: combinedErrors });
+            dispatch({ type: 'SET_ERRORS', payload: combinedErrors });
           }
         }
       });
@@ -79,26 +159,33 @@ const useForm = ({
     [runAllValidations, state.values]
   );
 
-  const executeSubmit = useEventCallback(() => onSubmit(state.values), [
+  const executeSubmit = useEventCallback(() => onSubmit(state.values, reset), [
     onSubmit,
     state.values,
   ]);
 
   const submitForm = useEventCallback(() => {
+    setIsSubmitting(true);
+    // Set all fields as touched because we want to validate also untouched fields
+    dispatch({
+      type: 'SET_TOUCHED',
+      payload: setObjectValues(state.values, true),
+    });
     return runAllValidations(state.values).then(combinedErrors => {
       const isActuallyValid = Object.keys(combinedErrors).length === 0;
       if (isActuallyValid) {
         return Promise.resolve(executeSubmit())
           .then(() => {
-            console.log('Submit success');
+            setIsSubmitting(false);
+            return Promise.resolve(false);
           })
           .catch(errors => {
-            console.log('Submit failure');
+            setIsSubmitting(false);
             throw errors;
           });
       } else if (!!isMounted.current) {
-        console.error('There was a problem with submitting the form');
-        return;
+        dispatch({ type: 'SET_ERRORS', payload: combinedErrors });
+        return Promise.resolve(combinedErrors);
       }
       return;
     });
@@ -113,19 +200,26 @@ const useForm = ({
         event.stopPropagation();
       }
 
-      submitForm(state.values);
+      return submitForm(state.values);
     },
     [submitForm]
   );
 
   const setFieldValue = useEventCallback(
     (name, value) => {
+      if (isEqual(value, state.values[name])) return;
+
+      // We want to validate with the fresh values
       const newValues = {
         ...state.values,
         [name]: value,
       };
-      setState({
-        values: newValues,
+      dispatch({
+        type: 'SET_FIELD_VALUE',
+        payload: {
+          name,
+          value,
+        },
       });
       return validateOnChange ? validateForm(newValues) : Promise.resolve();
     },
@@ -134,10 +228,11 @@ const useForm = ({
 
   const setFieldTouched = useEventCallback(
     (name, touched = true) => {
-      setState({
-        touched: {
-          ...state.touched,
-          [name]: touched,
+      dispatch({
+        type: 'SET_FIELD_TOUCHED',
+        payload: {
+          name,
+          value: touched,
         },
       });
       return validateOnBlur ? validateForm(state.values) : Promise.resolve();
@@ -190,10 +285,10 @@ const useForm = ({
     [setFieldValue]
   );
 
-  const dirty = React.useMemo(
-    () => !isEqual(initialValues.current, state.values),
-    [state.values]
-  );
+  const dirty = React.useMemo(() => !isEqual(initialValues, state.values), [
+    initialValues,
+    state.values,
+  ]);
 
   const isValid = React.useMemo(
     () =>
@@ -201,21 +296,27 @@ const useForm = ({
     [dirty, state.errors]
   );
 
-  const reset = React.useCallback(event => {
-    if (event && event.preventDefault && isFunction(event.preventDefault)) {
-      event.preventDefault();
-    }
+  const reset = React.useCallback(
+    event => {
+      if (event && event.preventDefault && isFunction(event.preventDefault)) {
+        event.preventDefault();
+      }
 
-    if (event && event.stopPropagation && isFunction(event.stopPropagation)) {
-      event.stopPropagation();
-    }
+      if (event && event.stopPropagation && isFunction(event.stopPropagation)) {
+        event.stopPropagation();
+      }
 
-    setState({
-      values: initialValues.current,
-      errors: {},
-      touched: {},
-    });
-  }, []);
+      dispatch({
+        type: 'RESET_FORM',
+        payload: {
+          values: initialValues,
+          errors: {},
+          touched: {},
+        },
+      });
+    },
+    [initialValues]
+  );
 
   return {
     handleSubmit,
@@ -229,6 +330,7 @@ const useForm = ({
     setFieldValue,
     setFieldTouched,
     reset,
+    isSubmitting,
   };
 };
 

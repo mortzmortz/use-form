@@ -19,6 +19,7 @@ describe('useForm API', () => {
       handleSubmit: expect.any(Function),
       handleChange: expect.any(Function),
       handleBlur: expect.any(Function),
+      isSubmitting: false,
     });
   });
 
